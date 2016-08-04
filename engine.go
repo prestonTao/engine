@@ -11,30 +11,22 @@ import (
 // )
 
 type Engine struct {
-	name   string
-	status int //服务器状态
-	net    *Net
-	//	receive <-chan *Packet
-	//	controller  Controller
+	name     string
+	status   int //服务器状态
+	net      *Net
 	auth     Auth
 	onceRead *sync.Once
-	// router      *RouterStore
 }
 
 /*
 	注册一个普通消息
 */
 func (this *Engine) RegisterMsg(msgId uint32, handler MsgHandler) {
-	// if msgId <= 100 {
-	// 	fmt.Println("该消息不能注册，消息编号0-100被系统占用。")
-	// 	return
-	// }
-	AddRouter(msgId, handler)
+	this.net.router.AddRouter(msgId, handler)
 }
 
-func (this *Engine) Listen(ip string, port int32) {
-	//	this.run()
-	this.net.Listen(ip, port)
+func (this *Engine) Listen(ip string, port int32) error {
+	return this.net.Listen(ip, port)
 }
 
 /*
@@ -43,7 +35,6 @@ func (this *Engine) Listen(ip string, port int32) {
 	@return  name  对方的名称
 */
 func (this *Engine) AddClientConn(ip string, port int32, powerful bool) (name string, err error) {
-	//	this.run()
 	session, err := this.net.AddClientConn(ip, this.name, port, powerful)
 	if err != nil {
 		return "", err
@@ -80,79 +71,18 @@ func (this *Engine) SetAuth(auth Auth) {
 	defaultAuth = auth
 }
 
+func (this *Engine) SetInPacket(packet GetPacket) {
+	this.net.inPacket = packet
+}
+
+func (this *Engine) SetOutPacket(packet GetPacketBytes) {
+	this.net.outPacket = packet
+}
+
 //设置关闭连接回调方法
 func (this *Engine) SetCloseCallback(call CloseCallback) {
 	this.net.closecallback = call
 }
-
-//func (this *Engine) run() {
-//	//保证方法只执行一次
-//	this.onceRead.Do(func() {
-//		this.receive = this.net.Recv
-//		//构建控制器
-//		this.buildController()
-//		go this.read()
-//	})
-//}
-
-//func (this *Engine) buildController() {
-//	c := new(ControllerImpl)
-//	c.lock = new(sync.RWMutex)
-//	c.net = this.net
-//	c.engine = this
-//	c.attributes = make(map[string]interface{})
-//	c.msgGroup = NewMsgGroupManager()
-//	c.msgGroup.controller = c
-//	this.controller = c
-//}
-
-//读取网络模块发送来的消息
-//func (this *Engine) read() {
-//	//保证将消息处理完才关闭服务器
-//	for msg := range this.receive {
-//		this.handler(msg)
-//	}
-//}
-
-//负责将接收到的消息转换为结构体
-//func (this *Engine) handler(msg *Packet) {
-//	handler := GetHandler(msg.MsgID)
-//	if handler == nil {
-//		Log.Warn("该消息未注册，消息编号：%d", msg.MsgID)
-//		return
-//	}
-//	//这里决定了消息是否异步处理
-//	this.handlerProcess(handler, msg)
-//}
-
-//func (this *Engine) handlerProcess(handler MsgHandler, msg *Packet) {
-//	//消息处理模块报错将不会引起宕机
-//	//	defer func() {
-//	//		if err := recover(); err != nil {
-//	//			e, ok := err.(error)
-//	//			if ok {
-//	//				Log.Error("handler error msgId:%d \n %v", msg.MsgID, e)
-//	//				//				fmt.Println("网络库：", e.Error())
-//	//			}
-//	//		}
-//	//	}()
-//	defer PrintPanicStack()
-//	//消息处理前先通过拦截器
-//	itps := this.interceptor.getInterceptors()
-//	itpsLen := len(itps)
-//	for i := 0; i < itpsLen; i++ {
-//		isIntercept := itps[i].In(this.controller, *msg)
-//		//
-//		if isIntercept {
-//			return
-//		}
-//	}
-//	handler(this.controller, *msg)
-//	//消息处理后也要通过拦截器
-//	for i := itpsLen; i > 0; i-- {
-//		itps[i-1].Out(this.controller, *msg)
-//	}
-//}
 
 //@name   本服务器名称
 func NewEngine(name string) *Engine {
@@ -161,6 +91,5 @@ func NewEngine(name string) *Engine {
 	//	engine.interceptor = NewInterceptor()
 	engine.onceRead = new(sync.Once)
 	engine.net = NewNet(name)
-	// engine.router = router
 	return engine
 }

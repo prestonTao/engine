@@ -26,8 +26,8 @@ func (this *InterceptorProvider) addInterceptor(itpr Interceptor) {
 	this.interceptors = append(this.interceptors, itpr)
 }
 func (this *InterceptorProvider) getInterceptors() []Interceptor {
-	this.lock.Lock()
-	defer this.lock.Unlock()
+	this.lock.RLock()
+	defer this.lock.RUnlock()
 	return this.interceptors
 
 }

@@ -8,9 +8,10 @@ import (
 	// "fmt"
 )
 
-var defaultGetPacket GetPacket = RecvPackage
+// var defaultGetPacket GetPacket = RecvPackage
 
 type GetPacket func(cache *[]byte, index *uint32) (packet *Packet, e error)
+type GetPacketBytes func(msgID, opt, errcode uint32, cryKey []byte, data *[]byte) *[]byte
 
 type Packet struct {
 	Opt       uint32
@@ -22,10 +23,6 @@ type Packet struct {
 	Session   Session
 }
 
-//
-// func (this *Packet) GetData() []byte {
-// 	return*th is.data[this.headSize:this.Size]
-// }
 /*
 	系统默认的消息接收并转化为Packet的方法
 	一个packet包括包头和包体，保证在接收到包头后两秒钟内接收到包体，否则线程会一直阻塞

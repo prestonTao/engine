@@ -22,7 +22,7 @@ func RegisterMsg(msgId uint32, handler MsgHandler) {
 	// 	fmt.Println("该消息不能注册，消息编号0-20被系统占用。")
 	// 	return
 	// }
-	AddRouter(msgId, handler)
+	engine.RegisterMsg(msgId, handler)
 }
 
 func Listen(ip string, port int32) error {

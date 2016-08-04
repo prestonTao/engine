@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 	"github.com/prestonTao/engine"
 	"time"
 )
@@ -10,13 +10,14 @@ func main() {
 	example1()
 }
 
+var CryKey = []byte{0, 0, 0, 0, 0, 0, 0, 0}
+
 func example1() {
 	engine.GlobalInit("console", "", "debug", 1)
-	// server := engine.NewNet("tao")
-	engine.RegisterMsg(101, hello)
-	// server
 
 	engine.InitEngine("file_server")
+	engine.RegisterMsg(101, hello)
+
 	// engine.SetAuth(new(handlers.NoneAuth))
 	// engine.SetCloseCallback(handlers.CloseConnHook)
 	err := engine.Listen("127.0.0.1", int32(9981))
@@ -27,7 +28,9 @@ func example1() {
 }
 
 func hello(c engine.Controller, msg engine.Packet) {
-
+	fmt.Println(string(msg.Data), "sever")
+	data := []byte("hello")
+	msg.Session.Send(101, 0, 0, CryKey, &data)
 }
 
 type FindNode struct {

@@ -3,6 +3,7 @@ package engine
 import (
 	"net"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -16,13 +17,15 @@ func init() {
 }
 
 type Net struct {
-	//	Recv          chan *Packet //获得数据
 	Name          string //本机名称
 	interceptor   *InterceptorProvider
 	sessionStore  *sessionStore
 	closecallback CloseCallback
 	ipPort        string
 	lis           *net.TCPListener
+	router        *Router
+	inPacket      GetPacket
+	outPacket     GetPacketBytes
 	isSuspend     bool
 }
 
@@ -39,8 +42,6 @@ func (this *Net) Listen(ip string, port int32) error {
 		return err
 	}
 	Log.Debug("监听一个地址：%s", ip+":"+strconv.Itoa(int(port)))
-	// fmt.Println("监听一个地址：", ip+":"+strconv.Itoa(int(port)))
-	// fmt.Println(ip + ":" + strconv.Itoa(int(port)) + "成功启动服务器")
 	go this.listener(this.lis)
 	return nil
 }
@@ -63,6 +64,7 @@ func (this *Net) listener(listener *net.TCPListener) {
 
 //创建一个新的连接
 func (this *Net) newConnect(conn net.Conn) {
+	defer PrintPanicStack()
 	remoteName, err := defaultAuth.RecvKey(conn, this.Name)
 	if err != nil {
 		return
@@ -72,6 +74,7 @@ func (this *Net) newConnect(conn net.Conn) {
 		cache:      make([]byte, 16*1024*1024, 16*1024*1024),
 		cacheindex: 0,
 		tempcache:  make([]byte, 1024, 1024),
+		lock:       new(sync.RWMutex),
 	}
 
 	serverConn := &ServerConn{
@@ -117,6 +120,7 @@ func (this *Net) AddClientConn(ip, serverName string, port int32, powerful bool)
 		cache:      make([]byte, 1024, 16*1024*1024),
 		cacheindex: 0,
 		tempcache:  make([]byte, 1024, 1024),
+		lock:       new(sync.RWMutex),
 	}
 	clientConn := &Client{
 		sessionBase: sessionBase,
@@ -161,7 +165,9 @@ func NewNet(name string) *Net {
 	net.Name = name
 	net.interceptor = NewInterceptor()
 	net.sessionStore = NewSessionStore()
-	//	net.Recv = make(chan *Packet, 5000)
+	net.inPacket = RecvPackage
+	net.outPacket = MarshalPacket
+	net.router = NewRouter()
 	return net
 }
 

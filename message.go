@@ -11,9 +11,11 @@ const (
 
 var zero_bytes = []byte{0x00}
 
-func init() {
-	AddRouter(CloseConn, CloseConnMsg)
-}
+// func init() {
+// 	AddRouter(CloseConn, CloseConnMsg)
+// }
+
+type CloseCallback func(name string)
 
 /*
 	关闭连接消息

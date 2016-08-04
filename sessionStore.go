@@ -13,13 +13,19 @@ type sessionBase struct {
 	cache        []byte
 	cacheindex   uint32
 	tempcache    []byte
+	lock         *sync.RWMutex
 }
 
 func (this *sessionBase) Set(name string, value interface{}) {
+	this.lock.Lock()
 	this.attrbutes[name] = value
+	this.lock.Unlock()
 }
 func (this *sessionBase) Get(name string) interface{} {
-	return this.attrbutes[name]
+	this.lock.RLock()
+	itr := this.attrbutes[name]
+	this.lock.RUnlock()
+	return itr
 }
 func (this *sessionBase) GetName() string {
 	return this.name
@@ -60,8 +66,8 @@ func (this *sessionStore) addSession(name string, session Session) {
 }
 
 func (this *sessionStore) getSession(name string) (Session, bool) {
-	this.lock.Lock()
-	defer this.lock.Unlock()
+	this.lock.RLock()
+	defer this.lock.RUnlock()
 	s, ok := this.nameStore[name]
 	return s, ok
 }
@@ -84,8 +90,8 @@ func (this *sessionStore) renameSession(oldName, newName string) {
 }
 
 func (this *sessionStore) getAllSession() []Session {
-	this.lock.Lock()
-	defer this.lock.Unlock()
+	this.lock.RLock()
+	defer this.lock.RUnlock()
 	ss := make([]Session, 0)
 	for _, s := range this.nameStore {
 		ss = append(ss, s)

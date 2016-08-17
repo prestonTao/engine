@@ -40,7 +40,7 @@ func (this *ServerConn) recv() {
 			break
 		}
 		//TODO 判断超过16k的情况，断开客户端
-		copy(this.cache, append(this.tempcache[:this.cacheindex], this.tempcache[:n]...))
+		copy(this.cache, append(this.cache[:this.cacheindex], this.tempcache[:n]...))
 		this.cacheindex = this.cacheindex + uint32(n)
 
 		for {
@@ -105,8 +105,16 @@ func (this *ServerConn) handlerProcess(handler MsgHandler, msg *Packet) {
 func (this *ServerConn) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]byte) (err error) {
 	defer PrintPanicStack()
 	buff := this.net.outPacket(msgID, opt, errcode, cryKey, data)
-	// this.outData <- buff
-	_, err = this.conn.Write(*buff)
+	index := 0
+	for {
+		if len(*data) > 1024 {
+			_, err = this.conn.Write((*buff)[index : index+1024])
+			index = index + 1024
+		} else {
+			_, err = this.conn.Write((*buff)[index:])
+			break
+		}
+	}
 	Log.Debug("conn send: %d, %s, %d", msgID, this.conn.RemoteAddr(), len(*buff))
 	return
 }

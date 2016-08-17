@@ -77,7 +77,7 @@ func (this *Client) recv() {
 			break
 		}
 		//TODO 判断超过16k的情况，断开客户端
-		copy(this.cache, append(this.tempcache[:this.cacheindex], this.tempcache[:n]...))
+		copy(this.cache, append(this.cache[:this.cacheindex], this.tempcache[:n]...))
 		this.cacheindex = this.cacheindex + uint32(n)
 
 		for {

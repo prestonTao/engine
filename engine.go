@@ -71,13 +71,13 @@ func (this *Engine) SetAuth(auth Auth) {
 	defaultAuth = auth
 }
 
-func (this *Engine) SetInPacket(packet GetPacket) {
-	this.net.inPacket = packet
-}
+//func (this *Engine) SetInPacket(packet GetPacket) {
+//	this.net.inPacket = packet
+//}
 
-func (this *Engine) SetOutPacket(packet GetPacketBytes) {
-	this.net.outPacket = packet
-}
+//func (this *Engine) SetOutPacket(packet GetPacketBytes) {
+//	this.net.outPacket = packet
+//}
 
 //设置关闭连接回调方法
 func (this *Engine) SetCloseCallback(call CloseCallback) {

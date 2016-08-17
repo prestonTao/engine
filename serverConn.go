@@ -13,10 +13,11 @@ type ServerConn struct {
 	Ip             string
 	Connected_time string
 	CloseTime      string
-	inPack         chan *Packet
-	isClose        bool //该连接是否已经关闭
-	net            *Net
-	controller     Controller
+	packet         Packet
+	//	inPack         chan *Packet
+	isClose    bool //该连接是否已经关闭
+	net        *Net
+	controller Controller
 }
 
 func (this *ServerConn) run() {
@@ -25,6 +26,7 @@ func (this *ServerConn) run() {
 		net:        this.net,
 		attributes: make(map[string]interface{}),
 	}
+	this.packet.Session = this
 
 	go this.recv()
 }
@@ -43,32 +45,29 @@ func (this *ServerConn) recv() {
 		copy(this.cache, append(this.cache[:this.cacheindex], this.tempcache[:n]...))
 		this.cacheindex = this.cacheindex + uint32(n)
 
+		var ok bool
+		var handler MsgHandler
 		for {
-			packet, err := RecvPackage(&this.cache, &this.cacheindex)
-			if packet == nil {
+			err, ok = RecvPackage(&this.cache, &this.cacheindex, &this.packet)
+			if !ok {
 				if err != nil {
 					this.isClose = true
 					Log.Warn("net error %s", err.Error())
 				}
 				break
 			} else {
-				Log.Debug("conn recv: %d, %s, %d", packet.MsgID, this.conn.RemoteAddr(), len(packet.Data))
-				// if packet.MsgID == 0 {
-				// 	//hold 心跳包
-				// 	continue
-				// }
-				packet.Session = this
-				// this.inPack <- packet
-				handler := this.net.router.GetHandler(packet.MsgID)
+				Log.Debug("conn recv: %d, %s, %d", this.packet.MsgID, this.conn.RemoteAddr(), len(this.packet.Data))
+
+				handler = this.net.router.GetHandler(this.packet.MsgID)
 				if handler == nil {
-					Log.Warn("该消息未注册，消息编号：%d", packet.MsgID)
+					Log.Warn("该消息未注册，消息编号：%d", this.packet.MsgID)
 				} else {
 					//这里决定了消息是否异步处理
-					this.handlerProcess(handler, packet)
+					this.handlerProcess(handler, &this.packet)
 				}
 
-				copy(this.cache, this.cache[packet.Size:this.cacheindex])
-				this.cacheindex = this.cacheindex - packet.Size
+				copy(this.cache, this.cache[this.packet.Size:this.cacheindex])
+				this.cacheindex = this.cacheindex - this.packet.Size
 
 			}
 		}
@@ -104,10 +103,10 @@ func (this *ServerConn) handlerProcess(handler MsgHandler, msg *Packet) {
 //给客户端发送数据
 func (this *ServerConn) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]byte) (err error) {
 	defer PrintPanicStack()
-	buff := this.net.outPacket(msgID, opt, errcode, cryKey, data)
+	buff := MarshalPacket(msgID, opt, errcode, cryKey, data)
 	index := 0
 	for {
-		if len(*data) > 1024 {
+		if len(*buff) > 1024 {
 			_, err = this.conn.Write((*buff)[index : index+1024])
 			index = index + 1024
 		} else {
@@ -123,7 +122,7 @@ func (this *ServerConn) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]
 func (this *ServerConn) Close() {
 	// fmt.Println("调用关闭连接方法")
 	this.isClose = true
-	this.Send(CloseConn, 0, 0, []byte{}, &zero_bytes)
+	//	this.Send(CloseConn, 0, 0, []byte{}, &zero_bytes)
 }
 
 //获取远程ip地址和端口

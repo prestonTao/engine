@@ -15,6 +15,7 @@ type Client struct {
 	port       int32
 	conn       net.Conn
 	inPack     chan *Packet //接收队列
+	packet     Packet       //
 	isClose    bool         //该连接是否被关闭
 	isPowerful bool         //是否是强连接，强连接有短线重连功能
 	net        *Net
@@ -45,6 +46,7 @@ func (this *Client) Connect(ip string, port int32) (remoteName string, err error
 		net:        this.net,
 		attributes: make(map[string]interface{}),
 	}
+	this.packet.Session = this
 	go this.recv()
 	// go this.hold()
 	return
@@ -80,29 +82,30 @@ func (this *Client) recv() {
 		copy(this.cache, append(this.cache[:this.cacheindex], this.tempcache[:n]...))
 		this.cacheindex = this.cacheindex + uint32(n)
 
+		var ok bool
+		var handler MsgHandler
 		for {
-			packet, err := this.net.inPacket(&this.cache, &this.cacheindex)
-			if packet == nil {
+			err, ok = RecvPackage(&this.cache, &this.cacheindex, &this.packet)
+			if !ok {
 				if err != nil {
 					this.isClose = true
+					Log.Warn("net error %s", err.Error())
 				}
 				break
 			} else {
-				// if packet.MsgID == 0 {
-				// 	//hold 心跳包
-				// 	continue
-				// }
-				packet.Session = this
-				handler := this.net.router.GetHandler(packet.MsgID)
-				if handler == nil {
-					Log.Warn("该消息未注册，消息编号：%d", packet.MsgID)
-					continue
-				}
-				//这里决定了消息是否异步处理
-				this.handlerProcess(handler, packet)
+				Log.Debug("conn recv: %d, %s, %d", this.packet.MsgID, this.conn.RemoteAddr(), len(this.packet.Data))
 
-				copy(this.cache, this.cache[packet.Size:this.cacheindex])
-				this.cacheindex = this.cacheindex - packet.Size
+				handler = this.net.router.GetHandler(this.packet.MsgID)
+				if handler == nil {
+					Log.Warn("该消息未注册，消息编号：%d", this.packet.MsgID)
+				} else {
+					//这里决定了消息是否异步处理
+					this.handlerProcess(handler, &this.packet)
+				}
+
+				copy(this.cache, this.cache[this.packet.Size:this.cacheindex])
+				this.cacheindex = this.cacheindex - this.packet.Size
+
 			}
 		}
 	}
@@ -165,14 +168,24 @@ func (this *Client) handlerProcess(handler MsgHandler, msg *Packet) {
 
 //发送序列化后的数据
 func (this *Client) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]byte) (err error) {
+	//	defer PrintPanicStack()
+	//	buff := MarshalPacket(msgID, opt, errcode, cryKey, data)
+	//	_, err = this.conn.Write(*buff)
+	//	return
+
 	defer PrintPanicStack()
-	buff := this.net.outPacket(msgID, opt, errcode, cryKey, data)
-	// this.outData <- buff
-	_, err = this.conn.Write(*buff)
-	// if _, err = this.conn.Write(*msg); err != nil {
-	// 	log.Println("发送数据出错", err)
-	// 	return
-	// }
+	buff := MarshalPacket(msgID, opt, errcode, cryKey, data)
+	index := 0
+	for {
+		if len(*buff) > 1024 {
+			_, err = this.conn.Write((*buff)[index : index+1024])
+			index = index + 1024
+		} else {
+			_, err = this.conn.Write((*buff)[index:])
+			break
+		}
+	}
+	Log.Debug("conn send: %d, %s, %d", msgID, this.conn.RemoteAddr(), len(*buff))
 	return
 }
 
@@ -189,7 +202,7 @@ func (this *Client) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]byte
 //客户端关闭时,退出recv,send
 func (this *Client) Close() {
 	this.isClose = true
-	this.Send(CloseConn, 0, 0, []byte{}, &zero_bytes)
+	//	this.Send(CloseConn, 0, 0, []byte{}, &zero_bytes)
 }
 
 //获取远程ip地址和端口

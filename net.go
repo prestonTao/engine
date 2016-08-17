@@ -24,9 +24,9 @@ type Net struct {
 	ipPort        string
 	lis           *net.TCPListener
 	router        *Router
-	inPacket      GetPacket
-	outPacket     GetPacketBytes
-	isSuspend     bool
+	//	inPacket      GetPacket
+	//	outPacket GetPacketBytes
+	isSuspend bool
 }
 
 func (this *Net) Listen(ip string, port int32) error {
@@ -82,8 +82,9 @@ func (this *Net) newConnect(conn net.Conn) {
 		conn:           conn,
 		Ip:             conn.RemoteAddr().String(),
 		Connected_time: time.Now().String(),
-		inPack:         make(chan *Packet, 500),
-		net:            this,
+		//		inPack:         make(chan *Packet, 500),
+		packet: Packet{},
+		net:    this,
 	}
 	serverConn.sessionStore = this.sessionStore
 	serverConn.name = remoteName
@@ -126,6 +127,7 @@ func (this *Net) AddClientConn(ip, serverName string, port int32, powerful bool)
 		sessionBase: sessionBase,
 		serverName:  serverName,
 		inPack:      make(chan *Packet, 5000),
+		packet:      Packet{},
 		net:         this,
 		isPowerful:  powerful,
 	}
@@ -165,8 +167,8 @@ func NewNet(name string) *Net {
 	net.Name = name
 	net.interceptor = NewInterceptor()
 	net.sessionStore = NewSessionStore()
-	net.inPacket = RecvPackage
-	net.outPacket = MarshalPacket
+	//	net.inPacket = RecvPackage
+	//	net.outPacket = MarshalPacket
 	net.router = NewRouter()
 	return net
 }

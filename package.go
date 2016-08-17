@@ -28,18 +28,18 @@ type Packet struct {
 	一个packet包括包头和包体，保证在接收到包头后两秒钟内接收到包体，否则线程会一直阻塞
 	因此，引入了超时机制
 */
-func RecvPackage(cache *[]byte, index *uint32) (packet *Packet, e error) {
+func RecvPackage(cache *[]byte, index *uint32, packet *Packet) (error, bool) {
 	// fmt.Println("packet   11111", *index, (*cache))
 
 	if *index < 24 {
-		return nil, nil
+		return nil, false
 	}
-	packet = new(Packet)
+	//	packet = new(Packet)
 	packet.Opt = binary.LittleEndian.Uint32((*cache)[:4])
 	packet.Size = binary.LittleEndian.Uint32((*cache)[4:8])
 	if packet.Size < 24 {
 		// fmt.Println(*cache)
-		return nil, errors.New("包头错误")
+		return errors.New("包头错误"), false
 	}
 	packet.MsgID = binary.LittleEndian.Uint32((*cache)[8:12])
 	packet.Errorcode = binary.LittleEndian.Uint32((*cache)[12:16])
@@ -52,7 +52,7 @@ func RecvPackage(cache *[]byte, index *uint32) (packet *Packet, e error) {
 	// n, err = io.ReadFull(conn, bodyBytes)
 	// fmt.Println(*index, packet.Size)
 	if *index < packet.Size {
-		return nil, nil
+		return nil, false
 	}
 	// fmt.Println("packet   3333333", packet.Size)
 	// fmt.Println((*cache)[24 : packet.Size+2])
@@ -67,14 +67,14 @@ func RecvPackage(cache *[]byte, index *uint32) (packet *Packet, e error) {
 			// log.Println("", err)
 			// Log.Debug("rc4 error: %v", err)
 
-			return nil, errors.New("rc4 error " + err.Error())
+			return errors.New("rc4 error " + err.Error()), false
 		}
 		// fmt.Println("packet  加解密")
 		c.XORKeyStream(packet.Data, packet.Data)
 	}
 
 	// fmt.Println("packet  data 2", packet.Data)
-	return
+	return nil, true
 }
 
 func MarshalPacket(msgID, opt, errcode uint32, cryKey []byte, data *[]byte) *[]byte {

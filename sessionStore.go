@@ -60,50 +60,51 @@ type sessionStore struct {
 
 func (this *sessionStore) addSession(name string, session Session) {
 	this.lock.Lock()
-	defer this.lock.Unlock()
 	this.nameStore[session.GetName()] = session
-	// sessionStore.store[sessionId] = session
+	this.lock.Unlock()
 }
 
 func (this *sessionStore) getSession(name string) (Session, bool) {
 	this.lock.RLock()
-	defer this.lock.RUnlock()
 	s, ok := this.nameStore[name]
+	this.lock.RUnlock()
 	return s, ok
 }
 
 func (this *sessionStore) removeSession(name string) {
 	this.lock.Lock()
-	defer this.lock.Unlock()
 	delete(this.nameStore, name)
+	this.lock.Unlock()
 }
 
 func (this *sessionStore) renameSession(oldName, newName string) {
-	this.lock.Lock()
-	defer this.lock.Unlock()
 	s, ok := this.nameStore[oldName]
 	if !ok {
 		return
 	}
+	this.lock.Lock()
 	delete(this.nameStore, oldName)
+	this.lock.Unlock()
 	this.nameStore[newName] = s
 }
 
 func (this *sessionStore) getAllSession() []Session {
 	this.lock.RLock()
-	defer this.lock.RUnlock()
 	ss := make([]Session, 0)
 	for _, s := range this.nameStore {
 		ss = append(ss, s)
 	}
+	this.lock.RUnlock()
 	return ss
 }
 
 func (this *sessionStore) getAllSessionName() []string {
 	names := make([]string, 0)
+	this.lock.RLock()
 	for key, _ := range this.nameStore {
 		names = append(names, key)
 	}
+	this.lock.RUnlock()
 	return names
 }
 
@@ -113,10 +114,3 @@ func NewSessionStore() *sessionStore {
 	sessionStore.nameStore = make(map[string]Session)
 	return sessionStore
 }
-
-// var sessionStore = new(sessionStore)
-
-// func init() {
-// 	sessionStore.lock = new(sync.RWMutex)
-// 	sessionStore.nameStore = make(map[string]Session, 10000)
-// }

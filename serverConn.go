@@ -53,6 +53,8 @@ func (this *ServerConn) recv() {
 				if err != nil {
 					this.isClose = true
 					Log.Warn("net error %s", err.Error())
+					this.Close()
+					return
 				}
 				break
 			} else {
@@ -73,7 +75,8 @@ func (this *ServerConn) recv() {
 		}
 	}
 
-	this.net.CloseClient(this.GetName())
+	//	this.net.CloseClient(this.GetName())
+	this.Close()
 	//最后一个包接收了之后关闭chan
 	//如果有超时包需要等超时了才关闭，目前未做处理
 	// close(this.outData)
@@ -104,16 +107,17 @@ func (this *ServerConn) handlerProcess(handler MsgHandler, msg *Packet) {
 func (this *ServerConn) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]byte) (err error) {
 	defer PrintPanicStack()
 	buff := MarshalPacket(msgID, opt, errcode, cryKey, data)
-	index := 0
-	for {
-		if len(*buff) > 1024 {
-			_, err = this.conn.Write((*buff)[index : index+1024])
-			index = index + 1024
-		} else {
-			_, err = this.conn.Write((*buff)[index:])
-			break
-		}
-	}
+	//	index := 0
+	//	for {
+	//		if len(*buff) > 1024 {
+	//			_, err = this.conn.Write((*buff)[index : index+1024])
+	//			index = index + 1024
+	//		} else {
+	//			_, err = this.conn.Write((*buff)[index:])
+	//			break
+	//		}
+	//	}
+	_, err = this.conn.Write(*buff)
 	Log.Debug("conn send: %d, %s, %d", msgID, this.conn.RemoteAddr(), len(*buff))
 	return
 }
@@ -122,7 +126,10 @@ func (this *ServerConn) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]
 func (this *ServerConn) Close() {
 	// fmt.Println("调用关闭连接方法")
 	this.isClose = true
-	//	this.Send(CloseConn, 0, 0, []byte{}, &zero_bytes)
+	err := this.conn.Close()
+	if err != nil {
+	}
+	this.sessionStore.removeSession(this.GetName())
 }
 
 //获取远程ip地址和端口

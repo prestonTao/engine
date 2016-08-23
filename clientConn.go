@@ -38,7 +38,6 @@ func (this *Client) Connect(ip string, port int32) (remoteName string, err error
 		return
 	}
 
-	// fmt.Println("Connecting to", ip, ":", strconv.Itoa(int(port)))
 	Log.Debug("Connecting to %s:%s", ip, strconv.Itoa(int(port)))
 
 	this.controller = &ControllerImpl{
@@ -48,7 +47,6 @@ func (this *Client) Connect(ip string, port int32) (remoteName string, err error
 	}
 	this.packet.Session = this
 	go this.recv()
-	// go this.hold()
 	return
 }
 func (this *Client) reConnect() {
@@ -64,7 +62,6 @@ func (this *Client) reConnect() {
 		Log.Debug("Connecting to %s:%s", this.ip, strconv.Itoa(int(this.port)))
 
 		go this.recv()
-		// go this.hold()
 		return
 	}
 }
@@ -90,6 +87,8 @@ func (this *Client) recv() {
 				if err != nil {
 					this.isClose = true
 					Log.Warn("net error %s", err.Error())
+					this.Close()
+					return
 				}
 				break
 			} else {
@@ -137,72 +136,32 @@ func (this *Client) handlerProcess(handler MsgHandler, msg *Packet) {
 	}
 }
 
-// func (this *Client) send() {
-// 	defer func() {
-// 		// close(this.outData)
-// 		this.isClose = true
-// 		// fmt.Println("send 协成走完")
-// 	}()
-// 	// //处理客户端主动断开连接的情况
-// 	for msg := range this.outData {
-// 		if _, err := this.conn.Write(*msg); err != nil {
-// 			log.Println("发送数据出错", err)
-// 			return
-// 		}
-// 	}
-
-// }
-
-//心跳连接
-// func (this *Client) hold() {
-// 	for !this.isClose {
-// 		// fmt.Println("hold")
-// 		time.Sleep(time.Second * 2)
-// 		bs := []byte("")
-// 		this.Send(0, &bs)
-// 	}
-// 	// close(this.outData)
-// 	this.net.CloseClient(this.GetName())
-// 	fmt.Println("hold 协成走完")
-// }
-
 //发送序列化后的数据
 func (this *Client) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]byte) (err error) {
-	//	defer PrintPanicStack()
-	//	buff := MarshalPacket(msgID, opt, errcode, cryKey, data)
-	//	_, err = this.conn.Write(*buff)
-	//	return
-
 	defer PrintPanicStack()
 	buff := MarshalPacket(msgID, opt, errcode, cryKey, data)
-	index := 0
-	for {
-		if len(*buff) > 1024 {
-			_, err = this.conn.Write((*buff)[index : index+1024])
-			index = index + 1024
-		} else {
-			_, err = this.conn.Write((*buff)[index:])
-			break
-		}
-	}
+	//	index := 0
+	//	for {
+	//		if len(*buff) > 1024 {
+	//			_, err = this.conn.Write((*buff)[index : index+1024])
+	//			index = index + 1024
+	//		} else {
+	//			_, err = this.conn.Write((*buff)[index:])
+	//			break
+	//		}
+	//	}
+	_, err = this.conn.Write(*buff)
 	Log.Debug("conn send: %d, %s, %d", msgID, this.conn.RemoteAddr(), len(*buff))
 	return
 }
 
-// func (this *Client) GetOneMsg() {
-
-// }
-
-// //发送
-// func (this *Client) SendBytes(msgID uint32, data []byte) {
-// 	buff := MarshalPacket(msgID, &data)
-// 	this.outData <- buff
-// }
-
 //客户端关闭时,退出recv,send
 func (this *Client) Close() {
 	this.isClose = true
-	//	this.Send(CloseConn, 0, 0, []byte{}, &zero_bytes)
+	err := this.conn.Close()
+	if err != nil {
+	}
+	this.sessionStore.removeSession(this.GetName())
 }
 
 //获取远程ip地址和端口

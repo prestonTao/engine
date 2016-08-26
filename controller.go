@@ -9,41 +9,35 @@ type Controller interface {
 	GetNet() *Net                                //获得连接到本地的计算机连接
 	SetAttribute(name string, value interface{}) //设置共享数据，实现业务模块之间通信
 	GetAttribute(name string) interface{}        //得到共享数据，实现业务模块之间通信
-	GetGroupManager() MsgGroup                   //获得消息组管理器
 }
 
 type ControllerImpl struct {
 	lock       *sync.RWMutex
 	net        *Net
 	attributes map[string]interface{}
-	msgGroup   *msgGroupManager
 }
 
 //得到net模块，用于给用户发送消息
 func (this *ControllerImpl) GetNet() *Net {
-	this.lock.RLock()
-	defer this.lock.RUnlock()
 	return this.net
 }
 
 func (this *ControllerImpl) SetAttribute(name string, value interface{}) {
 	this.lock.Lock()
-	defer this.lock.Unlock()
 	this.attributes[name] = value
+	this.lock.Unlock()
 }
 func (this *ControllerImpl) GetAttribute(name string) interface{} {
 	this.lock.RLock()
-	defer this.lock.RUnlock()
-	return this.attributes[name]
+	itr := this.attributes[name]
+	this.lock.RUnlock()
+	return itr
 }
 
 //
 func (this *ControllerImpl) GetSession(name string) (Session, bool) {
 	this.lock.RLock()
-	defer this.lock.RUnlock()
-	return this.net.GetSession(name)
-}
-
-func (this *ControllerImpl) GetGroupManager() MsgGroup {
-	return this.msgGroup
+	s, ok := this.net.GetSession(name)
+	this.lock.RUnlock()
+	return s, ok
 }

@@ -15,7 +15,7 @@ type ServerConn struct {
 	CloseTime      string
 	packet         Packet
 	//	inPack         chan *Packet
-	isClose    bool //该连接是否已经关闭
+	//	isClose    bool //该连接是否已经关闭
 	net        *Net
 	controller Controller
 }
@@ -35,10 +35,9 @@ func (this *ServerConn) run() {
 func (this *ServerConn) recv() {
 	defer PrintPanicStack()
 	//处理客户端主动断开连接的情况
-	for !this.isClose {
+	for {
 		n, err := this.conn.Read(this.tempcache)
 		if err != nil {
-			this.Close()
 			break
 		}
 		//TODO 判断超过16k的情况，断开客户端
@@ -51,7 +50,7 @@ func (this *ServerConn) recv() {
 			err, ok = RecvPackage(&this.cache, &this.cacheindex, &this.packet)
 			if !ok {
 				if err != nil {
-					this.isClose = true
+					//					this.isClose = true
 					Log.Warn("net error %s", err.Error())
 					this.Close()
 					return
@@ -124,12 +123,13 @@ func (this *ServerConn) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]
 
 //关闭这个连接
 func (this *ServerConn) Close() {
-	// fmt.Println("调用关闭连接方法")
-	this.isClose = true
+	if this.net.closecallback != nil {
+		this.net.closecallback(this.GetName())
+	}
+	this.net.sessionStore.removeSession(this.GetName())
 	err := this.conn.Close()
 	if err != nil {
 	}
-	this.sessionStore.removeSession(this.GetName())
 }
 
 //获取远程ip地址和端口

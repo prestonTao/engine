@@ -101,10 +101,6 @@ func (this *Net) newConnect(conn net.Conn) {
 func (this *Net) CloseClient(name string) bool {
 	session, ok := this.sessionStore.getSession(name)
 	if ok {
-		if this.closecallback != nil {
-			this.closecallback(name)
-		}
-		this.sessionStore.removeSession(name)
 		session.Close()
 		return true
 	}

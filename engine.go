@@ -53,11 +53,6 @@ func (this *Engine) AddInterceptor(itpr Interceptor) {
 	this.net.interceptor.addInterceptor(itpr)
 }
 
-//得到控制器
-//func (this *Engine) GetController() Controller {
-//	return this.controller
-//}
-
 //获得session
 func (this *Engine) GetSession(name string) (Session, bool) {
 	return this.net.GetSession(name)

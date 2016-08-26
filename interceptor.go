@@ -22,12 +22,10 @@ type InterceptorProvider struct {
 
 func (this *InterceptorProvider) addInterceptor(itpr Interceptor) {
 	this.lock.Lock()
-	defer this.lock.Unlock()
 	this.interceptors = append(this.interceptors, itpr)
+	this.lock.Unlock()
 }
 func (this *InterceptorProvider) getInterceptors() []Interceptor {
-	this.lock.RLock()
-	defer this.lock.RUnlock()
 	return this.interceptors
 
 }

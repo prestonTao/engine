@@ -16,8 +16,8 @@ type Client struct {
 	conn       net.Conn
 	inPack     chan *Packet //接收队列
 	packet     Packet       //
-	isClose    bool         //该连接是否被关闭
-	isPowerful bool         //是否是强连接，强连接有短线重连功能
+	//	isClose    bool         //该连接是否被关闭
+	isPowerful bool //是否是强连接，强连接有短线重连功能
 	net        *Net
 	controller Controller
 }
@@ -68,11 +68,10 @@ func (this *Client) reConnect() {
 
 func (this *Client) recv() {
 	defer PrintPanicStack()
-	for !this.isClose {
+	for {
 
 		n, err := this.conn.Read(this.tempcache)
 		if err != nil {
-			this.Close()
 			break
 		}
 		//TODO 判断超过16k的情况，断开客户端
@@ -85,7 +84,7 @@ func (this *Client) recv() {
 			err, ok = RecvPackage(&this.cache, &this.cacheindex, &this.packet)
 			if !ok {
 				if err != nil {
-					this.isClose = true
+					//					this.isClose = true
 					Log.Warn("net error %s", err.Error())
 					this.Close()
 					return
@@ -109,7 +108,8 @@ func (this *Client) recv() {
 		}
 	}
 
-	this.net.CloseClient(this.GetName())
+	//	this.net.CloseClient(this.GetName())
+	this.Close()
 	if this.isPowerful {
 		go this.reConnect()
 	}
@@ -157,11 +157,13 @@ func (this *Client) Send(msgID, opt, errcode uint32, cryKey []byte, data *[]byte
 
 //客户端关闭时,退出recv,send
 func (this *Client) Close() {
-	this.isClose = true
+	if this.net.closecallback != nil {
+		this.net.closecallback(this.GetName())
+	}
+	this.net.sessionStore.removeSession(this.GetName())
 	err := this.conn.Close()
 	if err != nil {
 	}
-	this.sessionStore.removeSession(this.GetName())
 }
 
 //获取远程ip地址和端口

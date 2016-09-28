@@ -36,18 +36,19 @@ func (this *ServerConn) recv() {
 	defer PrintPanicStack()
 	//处理客户端主动断开连接的情况
 	for {
-		n, err := this.conn.Read(this.tempcache)
-		if err != nil {
-			break
-		}
-		//TODO 判断超过16k的情况，断开客户端
-		copy(this.cache, append(this.cache[:this.cacheindex], this.tempcache[:n]...))
-		this.cacheindex = this.cacheindex + uint32(n)
+		//		n, err := this.conn.Read(this.tempcache)
+		//		if err != nil {
+		//			break
+		//		}
+		//		//TODO 判断超过16k的情况，断开客户端
+		//		copy(this.cache, append(this.cache[:this.cacheindex], this.tempcache[:n]...))
+		//		this.cacheindex = this.cacheindex + uint32(n)
 
 		var ok bool
+		var err error
 		var handler MsgHandler
 		for {
-			err, ok = RecvPackage(&this.cache, &this.cacheindex, &this.packet)
+			err, ok = RecvPackage(this.conn, &this.packet)
 			if !ok {
 				if err != nil {
 					//					this.isClose = true
@@ -67,8 +68,8 @@ func (this *ServerConn) recv() {
 					this.handlerProcess(handler, &this.packet)
 				}
 
-				copy(this.cache, this.cache[this.packet.Size:this.cacheindex])
-				this.cacheindex = this.cacheindex - this.packet.Size
+				//				copy(this.cache, this.cache[this.packet.Size:this.cacheindex])
+				//				this.cacheindex = this.cacheindex - this.packet.Size
 
 			}
 		}

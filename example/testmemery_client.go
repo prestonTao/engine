@@ -22,8 +22,9 @@ func example1() {
 	for {
 		for j := 0; j < 100; j++ {
 			go func() {
-				for i := 0; i < 100000000000; i++ {
-					nameOne, err := engine.AddClientConn("192.168.1.18", int32(9981), false)
+				for i := 0; i < 10000; i++ {
+					nameOne, err := engine.AddClientConn("120.76.212.176", int32(9981), false)
+					//					nameOne, err := engine.AddClientConn("127.0.0.1", int32(9981), false)
 					if err != nil {
 						fmt.Println(err.Error())
 					}

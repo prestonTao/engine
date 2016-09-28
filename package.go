@@ -5,6 +5,7 @@ import (
 	"crypto/rc4"
 	"encoding/binary"
 	"errors"
+	"net"
 	// "fmt"
 )
 
@@ -28,36 +29,30 @@ type Packet struct {
 	一个packet包括包头和包体，保证在接收到包头后两秒钟内接收到包体，否则线程会一直阻塞
 	因此，引入了超时机制
 */
-func RecvPackage(cache *[]byte, index *uint32, packet *Packet) (error, bool) {
+func RecvPackage(conn net.Conn, packet *Packet) (error, bool) {
 	// fmt.Println("packet   11111", *index, (*cache))
 
-	if *index < 24 {
-		return nil, false
-	}
+	//	if *index < 24 {
+	//		return nil, false
+	//	}
 	//	packet = new(Packet)
-	packet.Opt = binary.LittleEndian.Uint32((*cache)[:4])
-	packet.Size = binary.LittleEndian.Uint32((*cache)[4:8])
-	if packet.Size < 24 {
-		// fmt.Println(*cache)
-		return errors.New("包头错误"), false
+	cache := make([]byte, 24)
+	n, err := conn.Read(cache)
+	//	fmt.Println(n, err != nil)
+	if err != nil || n != 24 {
+		return err, false
 	}
-	packet.MsgID = binary.LittleEndian.Uint32((*cache)[8:12])
-	packet.Errorcode = binary.LittleEndian.Uint32((*cache)[12:16])
-	packet.Crypt_key = (*cache)[16:24]
+	packet.Opt = binary.LittleEndian.Uint32((cache)[:4])
+	packet.Size = binary.LittleEndian.Uint32((cache)[4:8])
+	packet.MsgID = binary.LittleEndian.Uint32((cache)[8:12])
+	packet.Errorcode = binary.LittleEndian.Uint32((cache)[12:16])
+	packet.Crypt_key = (cache)[16:24]
 
-	// bodyBytes := make([]byte, packet.Size-24)
-
-	// timeout := NewTimeOut(func() {
-
-	// n, err = io.ReadFull(conn, bodyBytes)
-	// fmt.Println(*index, packet.Size)
-	if *index < packet.Size {
-		return nil, false
+	packet.Data = make([]byte, packet.Size-24, packet.Size-24)
+	n, err = conn.Read(packet.Data)
+	if err != nil || (uint32(n) != (packet.Size - 24)) {
+		return err, false
 	}
-	// fmt.Println("packet   3333333", packet.Size)
-	// fmt.Println((*cache)[24 : packet.Size+2])
-	packet.Data = (*cache)[24:packet.Size]
-	// fmt.Println("packet  data 1", packet.Data)
 
 	if (packet.Opt & 0x00800000) != 0 {
 		packet.Crypt_key = cry(packet.Crypt_key)

@@ -8,10 +8,10 @@ type sessionBase struct {
 	sessionStore *sessionStore
 	name         string
 	attrbutes    map[string]interface{}
-	cache        []byte
-	cacheindex   uint32
-	tempcache    []byte
-	lock         *sync.RWMutex
+	//	cache        []byte
+	//	cacheindex   uint32
+	//	tempcache    []byte
+	lock *sync.RWMutex
 }
 
 func (this *sessionBase) Set(name string, value interface{}) {

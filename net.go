@@ -71,10 +71,10 @@ func (this *Net) newConnect(conn net.Conn) {
 	}
 
 	sessionBase := sessionBase{
-		cache:      make([]byte, 16*1024*1024, 16*1024*1024),
-		cacheindex: 0,
-		tempcache:  make([]byte, 1024, 1024),
-		lock:       new(sync.RWMutex),
+		//		cache:      make([]byte, 16*1024*1024, 16*1024*1024),
+		//		cacheindex: 0,
+		//		tempcache:  make([]byte, 1024, 1024),
+		lock: new(sync.RWMutex),
 	}
 
 	serverConn := &ServerConn{
@@ -114,10 +114,10 @@ func (this *Net) CloseClient(name string) bool {
 */
 func (this *Net) AddClientConn(ip, serverName string, port int32, powerful bool) (Session, error) {
 	sessionBase := sessionBase{
-		cache:      make([]byte, 1024, 16*1024*1024),
-		cacheindex: 0,
-		tempcache:  make([]byte, 1024, 1024),
-		lock:       new(sync.RWMutex),
+		//		cache:      make([]byte, 1024, 16*1024*1024),
+		//		cacheindex: 0,
+		//		tempcache:  make([]byte, 1024, 1024),
+		lock: new(sync.RWMutex),
 	}
 	clientConn := &Client{
 		sessionBase: sessionBase,
